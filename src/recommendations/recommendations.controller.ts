@@ -28,6 +28,11 @@ export class RecommendationsController {
     enum: ['BREAKFAST', 'LUNCH', 'DINNER'],
     description: 'Loại bữa ăn',
   })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Ngày cần gợi ý (YYYY-MM-DD)',
+  })
   @ApiResponseSwagger({
     status: 200,
     description: 'Danh sách gợi ý món ăn',
@@ -35,7 +40,7 @@ export class RecommendationsController {
   async getRecommendations(@Query() query: GetRecommendationsDto) {
     const result = await this.recommendationsService.getRecommendations(
       query.mealType,
-      true,
+      query.date,
     );
     return result;
   }
@@ -56,6 +61,7 @@ export class RecommendationsController {
   async refreshRecommendations(@Body() body: RefreshRecommendationsDto) {
     const result = await this.recommendationsService.refreshRecommendations(
       body.mealType,
+      body.date,
     );
     return result;
   }

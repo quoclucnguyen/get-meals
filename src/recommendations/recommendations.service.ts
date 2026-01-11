@@ -33,23 +33,26 @@ export class RecommendationsService {
    */
   async getRecommendations(
     mealType: MealType,
+    date?: string,
     refresh: boolean = false,
   ): Promise<RecommendationsResponse> {
-    const cacheKey = mealType;
+    const cacheKey = date ? `${mealType}:${date}` : mealType;
 
     // Check cache if not refreshing
     if (!refresh) {
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
-        this.logger.debug(`Returning cached recommendations for ${mealType}`);
+        this.logger.debug(
+          `Returning cached recommendations for ${mealType}${date ? ` on ${date}` : ''}`,
+        );
         return cached.data;
       }
     }
 
     // Generate new recommendations
-    const response = await this.generateRecommendations(mealType);
+    const response = await this.generateRecommendations(mealType, date);
 
-    // Cache the result
+    // Cache result
     this.cache.set(cacheKey, {
       data: response,
       expiresAt: Date.now() + this.CACHE_DURATION_MS,
@@ -63,8 +66,9 @@ export class RecommendationsService {
    */
   async refreshRecommendations(
     mealType: MealType,
+    date?: string,
   ): Promise<RecommendationsResponse> {
-    return this.getRecommendations(mealType, true);
+    return this.getRecommendations(mealType, date, true);
   }
 
   /**
@@ -72,19 +76,37 @@ export class RecommendationsService {
    */
   private async generateRecommendations(
     mealType: MealType,
+    date?: string,
   ): Promise<RecommendationsResponse> {
     // Fetch all required context in parallel
-    const [weather, recentMeals, preferences] = await Promise.all([
-      this.weatherService.getWeather(),
-      this.mealsService.findRecentMeals(7),
-      this.preferencesService.getPreferences(),
-    ]);
+    const [weather, recentMeals, preferences, targetDateMeals] =
+      await Promise.all([
+        this.weatherService.getWeather(),
+        this.mealsService.findRecentMeals(7),
+        this.preferencesService.getPreferences(),
+        date
+          ? this.mealsService
+              .findAll({ startDate: date, endDate: date })
+              .then((r) => r.meals)
+          : Promise.resolve([]),
+      ]);
+
+    // Combine recent meals with meals from the target date (if specified)
+    const mealHistory = [...recentMeals];
+    if (date) {
+      // Add meals from target date to context if they exist
+      targetDateMeals.forEach((meal) => {
+        if (!mealHistory.find((m) => m.id === meal.id)) {
+          mealHistory.push(meal);
+        }
+      });
+    }
 
     // Generate recommendations using OpenAI
     const recommendations = await this.openaiService.generateRecommendations(
       mealType,
       weather,
-      recentMeals,
+      mealHistory,
       preferences,
     );
 

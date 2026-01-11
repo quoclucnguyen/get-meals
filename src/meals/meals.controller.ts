@@ -20,7 +20,12 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { MealsService } from './meals.service';
-import { CreateMealDto, UpdateMealDto, QueryMealsDto } from './dto';
+import {
+  CreateMealDto,
+  UpdateMealDto,
+  QueryMealsDto,
+  MealNameSearchDto,
+} from './dto';
 
 @ApiTags('meals')
 @Controller('meals')
@@ -121,5 +126,17 @@ export class MealsController {
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.mealsService.remove(id);
     return { message: 'Meal deleted successfully' };
+  }
+
+  @Get('search/names')
+  @ApiOperation({
+    summary: 'Tìm kiếm tên món ăn',
+    description: 'Tìm kiếm tên món ăn để autocomplete',
+  })
+  @ApiQuery({ name: 'query', required: false, description: 'Từ khóa tìm kiếm' })
+  @ApiResponseSwagger({ status: 200, description: 'Danh sách tên món ăn' })
+  async searchNames(@Query() dto: MealNameSearchDto) {
+    const result = await this.mealsService.searchNames(dto.query);
+    return result;
   }
 }

@@ -98,4 +98,26 @@ export class MealsService {
       order: { date: 'DESC' },
     });
   }
+
+  async searchNames(query?: string): Promise<{ names: string[] }> {
+    if (!query || query.trim().length < 2) {
+      return { names: [] };
+    }
+
+    const meals = await this.mealRepository
+      .createQueryBuilder('meal')
+      .select(['meal.name'])
+      .where('LOWER(meal.name) LIKE LOWER(:query)', {
+        query: `%${query.trim()}%`,
+      })
+      .orderBy('meal.name', 'ASC')
+      .limit(10)
+      .getMany();
+
+    const distinctNames = Array.from(
+      new Set(meals.map((meal) => meal.name)),
+    ).sort();
+
+    return { names: distinctNames };
+  }
 }

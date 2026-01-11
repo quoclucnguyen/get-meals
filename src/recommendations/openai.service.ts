@@ -18,8 +18,8 @@ interface OpenAIResponseData {
 export class OpenAIService {
   private readonly logger = new Logger(OpenAIService.name);
   private readonly OPENAI_API_URL =
-    'https://api.openai.com/v1/chat/completions';
-  private readonly MODEL = 'gpt-4o-mini';
+    'https://api.z.ai/api/coding/paas/v4/chat/completions';
+  private readonly MODEL = 'GLM-4.5-air';
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -38,7 +38,10 @@ export class OpenAIService {
       this.logger.warn(
         'OpenAI API key not configured, returning fallback recommendations',
       );
-      return this.getFallbackRecommendations(mealType);
+      throw new HttpException(
+        'OpenAI API key not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
 
     const prompt = this.buildPrompt(
@@ -75,7 +78,7 @@ export class OpenAIService {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 30000, // 30 seconds timeout
+          timeout: 120_000, // 120 seconds timeout
         },
       );
 
@@ -97,6 +100,8 @@ export class OpenAIService {
 
       return (parsed as OpenAIResponseData).recommendations.slice(0, 3);
     } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+
       if (error instanceof AxiosError) {
         this.logger.error(
           `OpenAI API error: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`,
@@ -108,14 +113,24 @@ export class OpenAIService {
             HttpStatus.TOO_MANY_REQUESTS,
           );
         }
+
+        throw new HttpException(
+          `Failed to get recommendations: ${error.response?.status} ${error.response?.statusText}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       } else if (error instanceof Error) {
         this.logger.error(`OpenAI error: ${error.message}`);
+        throw new HttpException(
+          `Failed to get recommendations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       } else {
         this.logger.error(`OpenAI error: Unknown error occurred`);
+        throw new HttpException(
+          'Failed to get recommendations: Unknown error occurred',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
-
-      // Return fallback recommendations on error
-      return this.getFallbackRecommendations(mealType);
     }
   }
 

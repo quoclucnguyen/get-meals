@@ -35,6 +35,7 @@ export class RecommendationsController {
   async getRecommendations(@Query() query: GetRecommendationsDto) {
     const result = await this.recommendationsService.getRecommendations(
       query.mealType,
+      true,
     );
     return result;
   }

@@ -15,6 +15,8 @@ import { RatingsModule } from './ratings/ratings.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { WeatherModule } from './weather/weather.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksService } from './tasks.service';
 
 @Module({
   imports: [
@@ -59,6 +61,7 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
         };
       },
     }),
+    ScheduleModule.forRoot(),
 
     // Feature Modules
     MealsModule,
@@ -68,6 +71,6 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
     RecommendationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, TasksService],
 })
 export class AppModule {}
